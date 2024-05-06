@@ -308,6 +308,6 @@ Windows의 경우는 속절없이 블로킹이지만 Linux에서는 buffer 처�
 
 ## 참고 사이트
 
-https://docs.spring.io/spring-boot/docs/current/reference/html/web.html#web  
-https://www.quora.com/What-is-the-difference-between-CPU-thread-and-OS-thread  
-https://stackoverflow.com/questions/17304013/is-console-output-a-blocking-operation  
+<https://docs.spring.io/spring-boot/docs/current/reference/html/web.html>  
+<https://www.quora.com/What-is-the-difference-between-CPU-thread-and-OS-thread>  
+<https://stackoverflow.com/questions/17304013/is-console-output-a-blocking-operation>  
