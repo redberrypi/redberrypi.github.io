@@ -1,0 +1,10 @@
+@startuml sync request example
+
+Client -> Server: sync request A
+Server --> Client: sync response A
+Client -> Server: sync request B
+Server --> Client: sync response B
+Client -> Server: sync request C
+Server --> Client: sync response C
+
+@enduml

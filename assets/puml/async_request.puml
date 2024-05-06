@@ -1,0 +1,10 @@
+@startuml async request example
+
+Client -> Server: async request A
+Client -> Server: async request B
+Server --> Client: async response A
+Client -> Server: async request C
+Server --> Client: async response C
+Server --> Client: async response B
+
+@enduml

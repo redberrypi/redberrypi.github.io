@@ -1,0 +1,16 @@
+@startuml async request example
+
+Client -> Server: async request A
+rnote over Client: non-blocked
+Client -> Server: async request B
+rnote over Client: non-blocked
+Server --> Client: async response A
+rnote over Client: non-blocked
+Client -> Server: async request C
+rnote over Client: non-blocked
+Server --> Client: async response C
+rnote over Client: non-blocked
+Server --> Client: async response B
+rnote over Client: non-blocked
+
+@enduml

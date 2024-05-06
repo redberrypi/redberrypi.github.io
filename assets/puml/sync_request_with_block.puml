@@ -1,0 +1,16 @@
+@startuml sync request example
+
+Client -> Server: sync request A
+rnote over Client: blocked
+Server --> Client: sync response A
+rnote over Client: non blocked
+Client -> Server: sync request B
+rnote over Client: blocked
+Server --> Client: sync response B
+rnote over Client: non blocked
+Client -> Server: sync request C
+rnote over Client: blocked
+Server --> Client: sync response C
+rnote over Client: non blocked
+
+@enduml
