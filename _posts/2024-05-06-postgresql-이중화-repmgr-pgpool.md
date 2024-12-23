@@ -308,8 +308,40 @@ pcp_attach_node -h /opt/bitnami/pgpool/tmp -U admin -W -n 0
 ```
 
 위 명령어에서 0이 노드 번호이다.  
-혹은 컨테이너 전체를 아예 삭제하고 다시 만들었더니 해결이 됐었다(참고로 restart로는 해결이 안 됐다.).  
+혹은 컨테이너 전체를 아예 삭제하고 다시 만들었더니 해결이 됐었다(참고로 restart로는 해결이 안 됐다).  
 
+### Primary 중복에 대한 문제
+
+여러 개의 postgres를 동시에 재시작할 때 이따금 pgpool을 기준으로 어떤 pgpool 노드는 1번 노드를 primary로 지정하고 어떤 노드는 2번 노드를 primary로 지정하는 현상이 일어났었다.  
+해당 현상은 postgres가 재시작할 때 어떤 pgpool 노드는 해당 postgres가 죽었다고 판단하여 failover를 실행하는 반면, 어떤 노드는 postgres가 다시 살아났다고 판단하여 primary를 그대로 유지하기 때문이다.  
+이는 postgres가 재시작되는 동안의 시동 시간과 pgpool의 healthcheck 시간이 절묘하게 맞아 떨어져서 그런 것으로, 시동 시간보다 healthcheck 시간을 충분히 늘려줌으로써 해결이 가능하다.  
+
+**pgpool의 경우**
+
+``` docker-compose.yml
+- PGPOOL_HEALTH_CHECK_PERIOD=30
+- PGPOOL_HEALTH_CHECK_TIMEOUT=10
+- PGPOOL_HEALTH_CHECK_MAX_RETRIES=5
+- PGPOOL_HEALTH_CHECK_RETRY_DELAY=10
+```
+
+위 설정에서는 PGPOOL_HEALTH_CHECK_MAX_RETRIES와 PGPOOL_HEALTH_CHECK_RETRY_DELAY가 곱해진 시간동안(50초) healthcheck를 시도한다.  
+원래는 해당 시간이 절묘하게 postgres의 시동 시간과 겹쳤기 때문에(약 25초) 위와 같은 불일치가 일어났었다.  
+시간을 너무 길게 하면 해당 시간 동안은 계속해서 에러가 나게 되고 너무 짧게 하면 의도치 않은 failover가 일어날 수 있으니 상황에 따라 적절한 값을 입력하여 주면 될 것이다.  
+
+**repmgr의 경우**
+
+``` docker-compose.yml
+- REPMGR_CONNECT_TIMEOUT=10
+- REPMGR_RECONNECT_ATTEMPTS=6
+- REPMGR_RECONNECT_INTERVAL=10
+```
+
+repmgr의 경우에도 해당 현상이 일어날 수 있다.  
+여기서는 (REPMGR_RECONNECT_ATTEMPTS - 1) * REPMGR_RECONNECT_INTERVAL의 시간만큼 healthcheck를 시도한다.  
+다시 말해 위의 설정은 pgpool의 설정과 같은 시간동안(50초) healthcheck를 시도하는 것이다.  
+다만 healthcheck의 시점이 살짝 미묘하기 때문에, 이론상으로는 만약 postgres가 50초 언저리의 시간에 걸쳐 repmgr과 pgpool의 healthcheck 시간 사이에 걸친 채로 재시작을 하게 될 경우 에러가 나게 된다는 미묘한 단점이 있다.  
+해당 확률이 그리 높지는 않겠지만, 염두에는 두는 게 좋을 수도 있다.  
 
 ## 기타 참고 사항
 
@@ -326,14 +358,15 @@ PCP 커맨드의 경우 보면 알겠지만 -h /opt/bitnami/pgpool/tmp라는 옵
 즉, PCP 서버가 해당 위치에 유닉스 도메인 소켓으로 돌아가고 있기 때문에 해당 위치를 호스트로 지정하는 것이다.  
 원래라면 딱히 호스트를 설정하지 않아도 돌아갔을 텐데, bitnami 컨테이너는 설정이 조금 다른 듯하다.  
 
-## 주의점
+## 주의점 및 한계
 
 눈썰미가 좋은 사람이라면 위와 같은 구조에서 커다란 문제점을 발견할 수 있을 것이다.  
 PostgreSQL이 2개가 되어 이중화가 된 것은 좋지만, 반대로 이번에는 pgpool 인스턴스가 하나가 되어 Single Point Of Failure가 되어버린 것이다.  
 이를 극복하기 위해 pgpool은 자체적으로 watchdog이라는 기능을 제공한다.  
 해당 기능을 사용하면 pgpool 앞단에 VIP를 두고 watchdog을 통해 여러 pgpool 중 PRIMARY가 내려갈 경우 자동으로 다른 pgpool 인스턴스를 primary로 추대한다.  
-다만 본인의 경우 운영 환경에 VIP를 사용하는 점이 문제가 되어서 다른 방식으로 해결을 한 부분이다.  
-만약 여력이 된다면 처음부터 이를 염두에 두고 설계를 하는 것이 좋을 것이다.  
+다만 docker 사용자의 경우 해당 기능을 이용하면 pgpool에 문제가 생겼을 경우 postgres에 직접 붙을 수 없다는 말이 있어서 사용하지 않는 게 오히려 낫다는 의견도 본 것 같다.  
+쿠버네티스의 경우 watchdog을 쓰지 않고 자체 service discovery를 이용할 수도 있을 것 같은데, 도커에서는 어떤 방식이 정석인지 아직 모르겠다.  
+본인의 경우 각 어플리케이션마다 전용의 pgpool을 붙여주었는데, 이것이 일반적인 방식은 아닐 거라고 생각한다.  
 
 ## 참고 사이트
 
