@@ -97,7 +97,7 @@ OOME의 성질상 메모리는 계속 쌓여만 갈 뿐이고, 그것은 GC 성�
 하지만 도커 컨테이너를 사용할 경우, `restart=always` 등의 옵션을 사용하면 어플리케이션이 종료되었을 때 자동으로 컨테이너를 재실행시키는 것이 가능하다.  
 따라서 다음과 같이 설정하는 게 편리할 수 있다.  
 
-``` Jvm
+``` jvm
 -XX:+HeapDumpOnOutOfMemoryError
 -XX:HeapDumpPath=/logs/heapdump.hprof 
 -XX:OnOutOfMemoryError=/scripts/log.sh
